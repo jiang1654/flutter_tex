@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_tex/flutter_tex.dart';
 import 'package:flutter_tex/src/utils/core_utils.dart';
@@ -56,6 +58,15 @@ class TeXViewState extends State<TeXView> with AutomaticKeepAliveClientMixin {
                   name: 'OnTapCallback',
                   onMessageReceived: (jm) {
                     widget.child.onTapCallback(jm.message);
+                  }),
+              JavascriptChannel(
+                  name: 'ImageClick',
+                  onMessageReceived: (jm) {
+                    Map<String, dynamic> data = jsonDecode(jm.message);
+                    List<String> images = List<String>.from(data['images']);
+                    int index = data['index'];
+                    String url = data['url'];
+                    widget.imageCallBack?.call(index, url, images);
                   })
             },
             javascriptMode: JavascriptMode.unrestricted,
@@ -71,6 +82,15 @@ class TeXViewState extends State<TeXView> with AutomaticKeepAliveClientMixin {
       if (widget.loadingWidgetBuilder != null) _height = minHeight;
       _controller!.webViewController
           .runJavascript("initView(${getRawData(widget)})");
+      _controller!.webViewController.runJavascript('''
+ window.onload = function() {
+      const images = document.getElementsByTagName('img');
+      for (let i = 0; i < images.length; i++) {
+        images[i].addEventListener('click', function() {
+          window.flutter_inappwebview.callHandler('onImageClick', images[i].src);
+        });
+      }
+    }''');
       _lastData = getRawData(widget);
     }
   }
